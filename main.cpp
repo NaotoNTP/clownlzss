@@ -31,6 +31,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "compressors/rage.h"
 #include "compressors/rocket.h"
 #include "compressors/saxman.h"
+#include "compressors/nlz.h"
 
 #include "decompressors/chameleon.h"
 #include "decompressors/comper.h"
@@ -53,7 +54,8 @@ enum class Format
 	RAGE,
 	ROCKET,
 	SAXMAN,
-	SAXMAN_NO_HEADER
+	SAXMAN_NO_HEADER,
+	NLZ
 };
 
 struct Mode
@@ -74,7 +76,8 @@ static const auto modes = std::to_array<Mode>({
 	{"-ra", Format::RAGE,             "out.rage", "out.ragem"},
 	{"-r",  Format::ROCKET,           "out.rock", "out.rockm"},
 	{"-s",  Format::SAXMAN,           "out.sax",  "out.saxm" },
-	{"-sn", Format::SAXMAN_NO_HEADER, "out.sax",  "out.saxm" }
+	{"-sn", Format::SAXMAN_NO_HEADER, "out.sax",  "out.saxm" },
+	{"-nlz",Format::NLZ,							"out.nlz",  "out.nlzm" }
 });
 
 static void PrintUsage(void)
@@ -97,6 +100,7 @@ static void PrintUsage(void)
 		"  -r     Rocket\n"
 		"  -s     Saxman\n"
 		"  -sn    Saxman (with no header)\n"
+		"  -nlz   NLZ\n"
 		"\n"
 		" Misc:\n"
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
@@ -294,6 +298,9 @@ int main(int argc, char **argv)
 						else
 							ClownLZSS::SaxmanDecompress(in_file, out_file, std::filesystem::file_size(in_filename));
 						break;
+					
+					case Format::NLZ:
+						break;
 				}
 			}
 			else
@@ -363,6 +370,12 @@ int main(int argc, char **argv)
 								return ClownLZSS::ModuledSaxmanCompress(file_buffer.data(), file_buffer.size(), out_file, module_size);
 							else
 								return ClownLZSS::SaxmanCompressWithoutHeader(file_buffer.data(), file_buffer.size(), out_file);
+						
+						case Format::NLZ:
+							if (moduled)
+								return ClownLZSS::ModuledNLZCompress(file_buffer.data(), file_buffer.size(), out_file, module_size);
+							else
+								return ClownLZSS::NLZCompress(file_buffer.data(), file_buffer.size(), out_file);
 					}
 
 					return false;
