@@ -403,9 +403,9 @@ int main(int argc, char **argv)
 								
 								case FORMAT_NLZ:
 									if (moduled)
-										success = ClownLZSS_ModuledCompressionWrapper(file_buffer, file_size, &callbacks, ClownLZSS_NLZCompress, module_size, 1);
+										success = ClownLZSS_ModuledCompressionWrapper(file_buffer, file_size, &callbacks, ClownLZSS_NLZCompressWithoutHeader, module_size, 1);
 									else
-										success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks);
+										success = ClownLZSS_NLZCompressWithHeader(file_buffer, file_size, &callbacks);
 									break;
 							}
 

@@ -22,6 +22,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #include "common.h"
 
-cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks);
+cc_bool ClownLZSS_NLZCompressWithHeader(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks);
+cc_bool ClownLZSS_NLZCompressWithoutHeader(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks);
 
 #endif /* CLOWNLZSS_NLZ_H */

@@ -41,7 +41,7 @@ static size_t GetMatchCost(size_t distance, size_t length, void *user)
 
 		if (length >= 2 && length <= 4 && distance <= 0x40)
 			return 2 + 8;				/* Descriptor bits, offset/length bytes. */
-		else if (length >= 5 && length <= 259 && distance <= 0x40)
+		else if (length >= 5 && distance <= 0x40)
 			return 2 + 8 + 8;		/* Descriptor bits, offset byte, length byte. */
 		else if (length >= 3 && length <= 9)
 			return 2 + 16;			/* Descriptor bits, offset/length bytes. */
@@ -98,7 +98,7 @@ static void PutDescriptorBit(NLZInstance *instance, cc_bool bit)
 	instance->descriptor |= bit;
 }
 
-cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks)
+cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks, cc_bool header)
 {
 	NLZInstance instance;
 	ClownLZSS_Match *matches, *match;
@@ -110,8 +110,15 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 	instance.descriptor_bits_remaining = TOTAL_DESCRIPTOR_BITS;
 
 	/* Produce a series of LZSS compression matches. */
-	if (!ClownLZSS_Compress(0x100 + 9, 0x2000, NULL, 1 + 8, GetMatchCost, data, 1, data_size, &matches, &total_matches, &instance))
+	if (!ClownLZSS_Compress(0x100, 0x2000, NULL, 1 + 8, GetMatchCost, data, 1, data_size, &matches, &total_matches, &instance))
 		return cc_false;
+
+	if (header)
+	{
+		/* Write the uncompressed data size to the header. */
+		callbacks->write(callbacks->user_data, ((data_size & 0xFF00) >> 8));
+		callbacks->write(callbacks->user_data, (data_size & 0xFF));
+	}
 
 	/* Begin first descriptor field. */
 	BeginDescriptorField(&instance);
@@ -135,27 +142,27 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 				PutDescriptorBit(&instance, 0);
 				callbacks->write(callbacks->user_data, (((distance - 1) & 0x3F) << 2) | (length - 1));
 			}
-			else if (length >= 5 && length <= 259 && distance <= 0x40)
+			else if (length >= 5 && distance <= 0x40)
 			{
 				PutDescriptorBit(&instance, 1);
 				PutDescriptorBit(&instance, 0);
 				callbacks->write(callbacks->user_data, (((distance - 1) & 0x3F) << 2));
-				callbacks->write(callbacks->user_data, length - 4);
+				callbacks->write(callbacks->user_data, length - 1);
 			}
 			else if (length >= 3 && length <= 9)
 			{
 				PutDescriptorBit(&instance, 1);
 				PutDescriptorBit(&instance, 1);
-				callbacks->write(callbacks->user_data, (((distance - 1) & 0xF00) << 3) | (length - 2));
+				callbacks->write(callbacks->user_data, (((distance - 1) & 0xF00) >> 5) | (length - 2));
 				callbacks->write(callbacks->user_data, distance & 0xFF);
 			}
 			else /*if (length >= 10)*/
 			{
 				PutDescriptorBit(&instance, 1);
 				PutDescriptorBit(&instance, 1);
-				callbacks->write(callbacks->user_data, (((distance - 1) & 0xF00) << 3));
+				callbacks->write(callbacks->user_data, (((distance - 1) & 0xF00) >> 5));
 				callbacks->write(callbacks->user_data, distance & 0xFF);
-				callbacks->write(callbacks->user_data, length - 10);
+				callbacks->write(callbacks->user_data, length - 1);
 			}
 		}
 	}
@@ -177,3 +184,14 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 
 	return cc_true;
 }
+
+cc_bool ClownLZSS_NLZCompressWithHeader(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks)
+{
+	return ClownLZSS_NLZCompress(data, data_size, callbacks, cc_true);
+}
+
+cc_bool ClownLZSS_NLZCompressWithoutHeader(const unsigned char *data, size_t data_size, const ClownLZSS_Callbacks *callbacks)
+{
+	return ClownLZSS_NLZCompress(data, data_size, callbacks, cc_false);
+}
+
