@@ -154,14 +154,14 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 				PutDescriptorBit(&instance, 1);
 				PutDescriptorBit(&instance, 1);
 				callbacks->write(callbacks->user_data, (((distance - 1) & 0xF00) >> 5) | (length - 2));
-				callbacks->write(callbacks->user_data, distance & 0xFF);
+				callbacks->write(callbacks->user_data, (distance - 1) & 0xFF);
 			}
 			else /*if (length >= 10)*/
 			{
 				PutDescriptorBit(&instance, 1);
 				PutDescriptorBit(&instance, 1);
 				callbacks->write(callbacks->user_data, (((distance - 1) & 0xF00) >> 5));
-				callbacks->write(callbacks->user_data, distance & 0xFF);
+				callbacks->write(callbacks->user_data, (distance - 1) & 0xFF);
 				callbacks->write(callbacks->user_data, length - 1);
 			}
 		}
