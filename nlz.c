@@ -123,7 +123,7 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 	/* Begin first descriptor field. */
 	BeginDescriptorField(&instance);
 
-	/* Produce Kosinski+-formatted data. */
+	/* Produce NLZ-formatted data. */
 	for (match = matches; match != &matches[total_matches]; ++match)
 	{
 		if (CLOWNLZSS_MATCH_IS_LITERAL(match))
