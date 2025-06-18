@@ -1,3 +1,7 @@
 {
-	"workbench.colorTheme": "m68k-dark"
+	"workbench.colorTheme": "m68k-dark",
+	"files.associations": {
+		"*.asm": "asm68k",
+		"clownlzss.h": "c"
+	}
 }

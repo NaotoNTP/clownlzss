@@ -402,10 +402,32 @@ int main(int argc, char **argv)
 									break;
 								
 								case FORMAT_NLZ:
-									if (moduled)
-										success = ClownLZSS_ModuledCompressionWrapper(file_buffer, file_size, &callbacks, ClownLZSS_NLZCompressWithoutHeader, module_size, 1);
-									else
-										success = ClownLZSS_NLZCompressWithHeader(file_buffer, file_size, &callbacks);
+									switch (module_size) 
+									{
+										case 0x200:
+											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 1);
+											break;
+										
+										case 0x400:
+											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 2);
+											break;
+										
+										case 0x800:
+											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 3);
+											break;
+										
+										case 0x1000:
+											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 4);
+											break;
+										
+										case 0x2000:	
+											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 5);
+											break;
+										
+										default:
+											fputs("Error: Invalid NLZ module size\n", stderr);
+											break;
+									}
 									break;
 							}
 
