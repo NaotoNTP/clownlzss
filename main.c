@@ -65,7 +65,7 @@ static const Mode modes[] = {
 	{"-r",  FORMAT_ROCKET,           "out.rock", "out.rockm"},
 	{"-s",  FORMAT_SAXMAN,           "out.sax",  "out.saxm" },
 	{"-sn", FORMAT_SAXMAN_NO_HEADER, "out.sax",  "out.saxm" },
-	{"-nlz",FORMAT_NLZ,							 "out.nlz",	 "out.nlzm" }
+	{"-nlz",FORMAT_NLZ,							 "out.nlz",	 "out.nlz" }
 };
 
 static void PrintUsage(void)
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 	const char *in_filename = NULL;
 	const char *out_filename = NULL;
 	cc_bool moduled = cc_false, decompress = cc_false;
-	size_t module_size = 0x1000;
+	size_t module_size = 0;
 
 	/* Skip past the executable name */
 	--argc;
@@ -199,8 +199,9 @@ int main(int argc, char **argv)
 			else if (!strncmp(argv[i], "-m", 2))
 			{
 				char *argument = strchr(argv[i], '=');
-
+				
 				moduled = cc_true;
+				module_size = 0x1000;
 
 				if (argument != NULL)
 				{
@@ -217,8 +218,8 @@ int main(int argc, char **argv)
 					{
 						module_size = result;
 
-						if (module_size > 0x1000)
-							fputs("Warning: the moduled format header does not fully support sizes greater than\n 0x1000 - header will likely be invalid!\n", stderr);
+						if ((module_size > 0x1000) && (mode != NULL) && (mode->format != FORMAT_NLZ))
+							fputs("Warning: the moduled format header does not fully support sizes greater than\n 0x1000 - header will likely be invalid! (this does not apply to NLZ).\n", stderr);
 					}
 				}
 			}
@@ -404,6 +405,10 @@ int main(int argc, char **argv)
 								case FORMAT_NLZ:
 									switch (module_size) 
 									{
+										case 0:
+											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 0);
+											break;
+										
 										case 0x200:
 											success = ClownLZSS_NLZCompress(file_buffer, file_size, &callbacks, 1);
 											break;

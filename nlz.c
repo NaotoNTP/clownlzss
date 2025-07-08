@@ -178,10 +178,21 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 	size_t total_matches;
 
 	/* Configure the sliding window size, boundary mask, and maximum packed copy length. */
-	window_size = (0x100 << module_config);
-	boundary_mask = (-0x100 << module_config);
-	max_packed_len = (0xFF >> module_config) + 2;
-	shift_count = module_config;
+
+	if (module_config == 0)
+	{
+		window_size = 0x2000;
+		boundary_mask = 0;
+		max_packed_len = 9;
+		shift_count = 5;
+	}
+	else
+	{
+		window_size = (0x100 << module_config);
+		boundary_mask = (-0x100 << module_config);
+		max_packed_len = (0xFF >> module_config) + 2;
+		shift_count = module_config;
+	}
 
 	/* Set up the state. */
 	instance.callbacks = callbacks;
@@ -193,7 +204,13 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 		return cc_false;
 
 	/* Write the number of full modules and the size of the last module to the header. */
-	if ((data_size % window_size) != 0)
+	if (module_config == 0)
+	{
+		callbacks->write(callbacks->user_data, (((data_size + 1) & 0xFE00) >> 9));
+		callbacks->write(callbacks->user_data, (((data_size + 1) & 0x1FE) >> 1));
+		callbacks->write(callbacks->user_data, 0);
+	}
+	else if ((data_size % window_size) != 0)
 	{
 		callbacks->write(callbacks->user_data, ((((data_size + 1) % window_size) & 0xFE00) >> 9));
 		callbacks->write(callbacks->user_data, ((((data_size + 1) % window_size) & 0x1FE) >> 1));
@@ -213,7 +230,10 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 	BeginDescriptorField(&instance);
 
 	/* Initialize the bytes remaining counter for the first module. */
-	bytes_remaining = window_size;
+	if (module_config == 0)
+		bytes_remaining = data_size + 1;
+	else
+		bytes_remaining = window_size;
 
 	/* Produce NLZ-formatted data. */
 	for (match = matches; match != &matches[total_matches]; ++match)
