@@ -17,6 +17,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "clowncommon/clowncommon.h"
 
@@ -124,15 +125,20 @@ static void SplitModule(NLZInstance *instance)
 	bytes_remaining = window_size;
 }
 
-static void EncodeMatch(NLZInstance *instance, size_t distance, size_t length)
+static void EncodeMatch(NLZInstance *instance, size_t distance, size_t length, const unsigned char *data, ClownLZSS_Match *match)
 {
 	const ClownLZSS_Callbacks* const callbacks = instance->callbacks;
+	size_t offset = 0;
+
+	if (length == 0)
+		return;
 
 	/* Check if the length of this match is larger than the number of bytes left for the current module and split if necessary. */
 	if (length > bytes_remaining)
 	{
-		length = length - bytes_remaining;
-		EncodeMatch(instance,distance,bytes_remaining);
+		length -= bytes_remaining;
+		offset += bytes_remaining;
+		EncodeMatch(instance, distance, bytes_remaining, data, match);
 	}
 
 	if (length >= 2 && length <= 4 && distance <= 0x40)
@@ -155,7 +161,7 @@ static void EncodeMatch(NLZInstance *instance, size_t distance, size_t length)
 		callbacks->write(callbacks->user_data, (((distance - 1) & 0xFF00) >> shift_count) | (length - 2));
 		callbacks->write(callbacks->user_data, (distance - 1) & 0xFF);
 	}
-	else /*if (length >= 10)*/
+	else if (length >= 10)
 	{
 		PutDescriptorBit(instance, 1);
 		PutDescriptorBit(instance, 1);
@@ -163,9 +169,25 @@ static void EncodeMatch(NLZInstance *instance, size_t distance, size_t length)
 		callbacks->write(callbacks->user_data, (distance - 1) & 0xFF);
 		callbacks->write(callbacks->user_data, length - 1);
 	}
+	else if (length == 2)
+	{
+		PutDescriptorBit(instance, 0);
+		callbacks->write(callbacks->user_data, data[match->source+offset]);
+		PutDescriptorBit(instance, 0);
+		callbacks->write(callbacks->user_data, data[match->source+offset+1]);
+	}
+	else if (length == 1)
+	{
+		PutDescriptorBit(instance, 0);
+		callbacks->write(callbacks->user_data, data[match->source+offset]);
+	}
+	else
+	{
+		printf("ERROR - UNHANDLED MATCH TYPE\nDistance: %lx\nLength: %lx\n",(unsigned long)distance, (unsigned long)length);
+	}
 
 	/* Decrease the byte counter for the current module and invoke a module split if necessary. */
-	bytes_remaining = bytes_remaining - length;
+	bytes_remaining -= length;
 	if (bytes_remaining == 0)
 		SplitModule(instance);
 
@@ -254,15 +276,15 @@ cc_bool ClownLZSS_NLZCompress(const unsigned char *data, size_t data_size, const
 
 			/* Check if this match occurrs along a buffer boundary and split it into two matches if necessary. */
 			if ((match->source & boundary_mask) == ((match->source + match->length) & boundary_mask))
-				EncodeMatch(&instance, distance, match->length);
+				EncodeMatch(&instance, distance, match->length, data, match);
 			else
 			{
 				size_t length = ((match->source + match->length) & boundary_mask) - match->source;
-				EncodeMatch(&instance, distance, length);
+				EncodeMatch(&instance, distance, length, data, match);
 
-				/* distance = (match->destination + length) - buffer_boundary;*/
+				match->source += length;
 				length = match->length - length;
-				EncodeMatch(&instance, distance, length);
+				EncodeMatch(&instance, distance, length, data, match);
 			}
 		}
 	}
