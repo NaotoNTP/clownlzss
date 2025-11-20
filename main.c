@@ -87,7 +87,7 @@ static void PrintUsage(void)
 		"  -r     Rocket\n"
 		"  -s     Saxman\n"
 		"  -sn    Saxman (with no header)\n"
-		"  -nlz   NLZ"
+		"  -nlz   NaotoLZ (NLZ)"
 		"\n"
 		" Misc:\n"
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 	const Mode *mode = NULL;
 	const char *in_filename = NULL;
 	const char *out_filename = NULL;
-	cc_bool moduled = cc_false, decompress = cc_false;
+	cc_bool moduled = cc_false, default_module_size = cc_true, decompress = cc_false;
 	size_t module_size = 0;
 
 	/* Skip past the executable name */
@@ -216,6 +216,7 @@ int main(int argc, char **argv)
 					}
 					else
 					{
+						default_module_size = cc_false;
 						module_size = result;
 
 						if ((module_size > 0x1000) && (mode != NULL) && (mode->format != FORMAT_NLZ))
@@ -403,6 +404,9 @@ int main(int argc, char **argv)
 									break;
 								
 								case FORMAT_NLZ:
+									if (default_module_size)
+										module_size = 0x800;
+
 									switch (module_size) 
 									{
 										case 0:
