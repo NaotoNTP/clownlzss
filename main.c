@@ -91,7 +91,7 @@ static void PrintUsage(void)
 		"\n"
 		" Misc:\n"
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
-		"                    MODULE_SIZE controls the module size (defaults to 0x1000)\n"
+		"                    MODULE_SIZE controls the module size (defaults to 0x1000 for most formats, 0x800 for NLZ)\n"
 		"  -d     Decompress (Saxman only)\n",
 		stdout
 	);
