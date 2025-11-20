@@ -87,7 +87,7 @@ static void PrintUsage(void)
 		"  -r     Rocket\n"
 		"  -s     Saxman\n"
 		"  -sn    Saxman (with no header)\n"
-		"  -nlz   NaotoLZ (NLZ)"
+		"  -nlz   NaotoLZ (NLZ)\n"
 		"\n"
 		" Misc:\n"
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
