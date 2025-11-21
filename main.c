@@ -17,6 +17,14 @@ PERFORMANCE OF THIS SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 #include "clowncommon/clowncommon.h"
 
@@ -91,7 +99,8 @@ static void PrintUsage(void)
 		"\n"
 		" Misc:\n"
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
-		"                    MODULE_SIZE controls the module size (defaults to 0x1000 for most formats, 0x800 for NLZ)\n"
+		"                    MODULE_SIZE controls the module size (default: 0x1000 for most formats, 0x800 for NLZ)\n"
+		"  -sk    Skip redundant recompression\n"
 		"  -d     Decompress (Saxman only)\n",
 		stdout
 	);
@@ -123,6 +132,37 @@ static size_t TellCallback(void* const user_data)
 	FILE* const file = (FILE*)user_data;
 
 	return (size_t)ftell(file);
+}
+
+static time_t GetFileModifiedTime(const char* file)
+{
+	time_t lastModified = 0;
+
+#ifdef _WIN32;
+	FILETIME lastWriteTime;
+	ULARGE_INTEGER uLargeInt;
+	HANDLE fileHandle = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (fileHandle == INVALID_HANDLE_VALUE)
+		return lastModified;
+	
+	if (GetFileTime(fileHandle, NULL, NULL, &lastWriteTime))
+	{
+		uLargeInt.LowPart = lastWriteTime.dwLowDateTime;
+		uLargeInt.HighPart = lastWriteTime.dwHighDateTime;
+		lastModified = uLargeInt.QuadPart;
+	}
+
+	CloseHandle(fileHandle);
+
+#else
+	struct stat fileStats;
+	
+	if (stat(file, &fileStats) == 0)
+		lastModified = fileStats.st_mtime;
+#endif
+
+	return lastModified;
 }
 
 #define CLOWNLZSS_READ_INPUT fgetc(in_file)
@@ -180,7 +220,7 @@ int main(int argc, char **argv)
 	const Mode *mode = NULL;
 	const char *in_filename = NULL;
 	const char *out_filename = NULL;
-	cc_bool moduled = cc_false, default_module_size = cc_true, decompress = cc_false;
+	cc_bool moduled = cc_false, default_module_size = cc_true, decompress = cc_false, skip_redundant_recomp = cc_false;
 	size_t module_size = 0;
 
 	/* Skip past the executable name */
@@ -227,6 +267,10 @@ int main(int argc, char **argv)
 			else if (!strcmp(argv[i], "-d"))
 			{
 				decompress = cc_true;
+			}
+			else if (!strcmp(argv[i], "-sk"))
+			{
+				skip_redundant_recomp = cc_true;
 			}
 			else
 			{
@@ -281,6 +325,14 @@ int main(int argc, char **argv)
 
 				if (out_filename == NULL)
 					out_filename = moduled ? mode->moduled_default_filename : mode->normal_default_filename;
+
+				/* If specified, skip redundant recompression if the file hasn't been modified since the previous recompression attempt */
+				if ((skip_redundant_recomp) && (GetFileModifiedTime(out_filename) >= GetFileModifiedTime(in_filename)))
+				{
+					fputs("Message: Skipping redundant recompression\n\n", stdout);
+					fclose(in_file);
+					return exit_code;
+				}
 
 				/* Write compressed data to output file */
 				out_file = fopen(out_filename, decompress ? "w+b" : "wb");
