@@ -329,7 +329,6 @@ int main(int argc, char **argv)
 				/* If specified, skip redundant recompression if the file hasn't been modified since the previous recompression attempt */
 				if ((skip_redundant_recomp) && (GetFileModifiedTime(out_filename) >= GetFileModifiedTime(in_filename)))
 				{
-					fputs("Message: Skipping redundant recompression\n\n", stdout);
 					fclose(in_file);
 					return exit_code;
 				}
