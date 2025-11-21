@@ -101,7 +101,8 @@ static void PrintUsage(void)
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
 		"                    MODULE_SIZE controls the module size (default: 0x1000 for most formats, 0x800 for NLZ)\n"
 		"  -sk    Skip redundant recompression\n"
-		"  -d     Decompress (Saxman only)\n",
+		"  -d     Decompress (Saxman only)\n"
+		"  -q     Run quietly",
 		stdout
 	);
 }
@@ -138,7 +139,7 @@ static time_t GetFileModifiedTime(const char* file)
 {
 	time_t lastModified = 0;
 
-#ifdef _WIN32;
+#ifdef _WIN32
 	FILETIME lastWriteTime;
 	ULARGE_INTEGER uLargeInt;
 	HANDLE fileHandle = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -220,7 +221,7 @@ int main(int argc, char **argv)
 	const Mode *mode = NULL;
 	const char *in_filename = NULL;
 	const char *out_filename = NULL;
-	cc_bool moduled = cc_false, default_module_size = cc_true, decompress = cc_false, skip_redundant_recomp = cc_false;
+	cc_bool moduled = cc_false, default_module_size = cc_true, decompress = cc_false, skip_redundant_recomp = cc_false, run_quiet = cc_false;
 	size_t module_size = 0;
 
 	/* Skip past the executable name */
@@ -250,7 +251,9 @@ int main(int argc, char **argv)
 
 					if (*end != '\0')
 					{
-						fputs("Invalid parameter to -m\n", stderr);
+						if (!run_quiet)
+							fputs("Invalid parameter to -m\n", stderr);
+
 						exit_code = EXIT_FAILURE;
 						break;
 					}
@@ -260,7 +263,8 @@ int main(int argc, char **argv)
 						module_size = result;
 
 						if ((module_size > 0x1000) && (mode != NULL) && (mode->format != FORMAT_NLZ))
-							fputs("Warning: the moduled format header does not fully support sizes greater than\n 0x1000 - header will likely be invalid! (this does not apply to NLZ).\n", stderr);
+							if (!run_quiet)
+								fputs("Warning: the moduled format header does not fully support sizes greater than\n 0x1000 - header will likely be invalid! (this does not apply to NLZ).\n", stderr);
 					}
 				}
 			}
@@ -271,6 +275,10 @@ int main(int argc, char **argv)
 			else if (!strcmp(argv[i], "-sk"))
 			{
 				skip_redundant_recomp = cc_true;
+			}
+			else if (!strcmp(argv[i], "-q"))
+			{
+				run_quiet = cc_true;
 			}
 			else
 			{
@@ -300,13 +308,19 @@ int main(int argc, char **argv)
 		if (in_filename == NULL)
 		{
 			exit_code = EXIT_FAILURE;
-			fputs("Error: Input file not specified\n\n", stderr);
+			
+			if (!run_quiet)
+				fputs("Error: Input file not specified\n\n", stderr);
+
 			PrintUsage();
 		}
 		else if (mode == NULL)
 		{
 			exit_code = EXIT_FAILURE;
-			fputs("Error: Format not specified\n\n", stderr);
+			
+			if (!run_quiet)
+				fputs("Error: Format not specified\n\n", stderr);
+
 			PrintUsage();
 		}
 		else
@@ -317,7 +331,9 @@ int main(int argc, char **argv)
 			if (in_file == NULL)
 			{
 				exit_code = EXIT_FAILURE;
-				fputs("Error: Could not open input file\n", stderr);
+				
+				if (!run_quiet)
+					fputs("Error: Could not open input file\n", stderr);
 			}
 			else
 			{
@@ -329,7 +345,9 @@ int main(int argc, char **argv)
 				/* If specified, skip redundant recompression if the file hasn't been modified since the previous recompression attempt */
 				if ((skip_redundant_recomp) && (GetFileModifiedTime(out_filename) >= GetFileModifiedTime(in_filename)))
 				{
-					fputs("Message: Skipping redundant recompression\n\n", stdout);
+					if (!run_quiet)
+						fputs("Message: Skipping redundant recompression\n\n", stdout);
+					
 					fclose(in_file);
 					return exit_code;
 				}
@@ -340,7 +358,9 @@ int main(int argc, char **argv)
 				if (out_file == NULL)
 				{
 					exit_code = EXIT_FAILURE;
-					fputs("Error: Could not open output file\n", stderr);
+					
+					if (!run_quiet)
+						fputs("Error: Could not open output file\n", stderr);
 				}
 				else
 				{
@@ -379,7 +399,9 @@ int main(int argc, char **argv)
 						if (file_buffer == NULL)
 						{
 							exit_code = EXIT_FAILURE;
-							fputs("Error: Could not allocate memory for the file buffer\n", stderr);
+							
+							if (!run_quiet)
+								fputs("Error: Could not allocate memory for the file buffer\n", stderr);
 						}
 						else
 						{
@@ -486,7 +508,8 @@ int main(int argc, char **argv)
 											break;
 										
 										default:
-											fputs("Error: Invalid NLZ module size\n", stderr);
+											if (!run_quiet)
+												fputs("Error: Invalid NLZ module size\n", stderr);
 											break;
 									}
 									break;
@@ -495,7 +518,9 @@ int main(int argc, char **argv)
 							if (!success)
 							{
 								exit_code = EXIT_FAILURE;
-								fputs("Error: File could not be compressed\n", stderr);
+								
+								if (!run_quiet)
+									fputs("Error: File could not be compressed\n", stderr);
 							}
 
 							free(file_buffer);
