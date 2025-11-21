@@ -481,7 +481,7 @@ int main(int argc, char **argv)
 									break;
 								
 								case FORMAT_NLZ:
-									if (default_module_size)
+									if (moduled && default_module_size) 
 										module_size = 0x800;
 
 									switch (module_size) 
