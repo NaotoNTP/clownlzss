@@ -96,7 +96,10 @@ static void PrintUsage(void)
 		"  -s     Saxman\n"
 		"  -sn    Saxman (with no header)\n"
 		"  -nlz   NaotoLZ (NLZ)\n"
-		"\n"
+		"\n",
+		stdout
+	);
+	fputs(
 		" Misc:\n"
 		"  -m[=MODULE_SIZE]  Compresses into modules\n"
 		"                    MODULE_SIZE controls the module size (default: 0x1000 for most formats, 0x800 for NLZ)\n"
